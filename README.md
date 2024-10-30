@@ -6,6 +6,9 @@ Parametrizavel:
 2 - Plano de fundo da mensagem
 3 - ID do canal para enviar mensagem
 4 - token
+5 - Background com foto ou COR
+6 - Cor do texto
+
 
 # Para rodar localmente
 dotnet run
