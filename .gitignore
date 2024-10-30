@@ -401,3 +401,4 @@ FodyWeavers.xsd
 
 # Ignora todos os arquivos com extensão .env
 *.env
+.env.*
