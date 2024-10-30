@@ -16,6 +16,9 @@ dotnet run
 # Para dar build da imagem docker
 docker build -t discord-app-welcome-messsage .
 
+# Para publicar no docker hub (somente autorizados no dockerhub)
+ docker build -t discord-app-welcome-message . ;  docker tag discord-app-welcome-message cafecomaquina/discord-app-welcome-message:latest ; docker push cafecomaquina/discord-app-welcome-message:latest
+
 
 # Docker Compose
 
