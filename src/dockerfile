@@ -1,0 +1,25 @@
+# Use uma imagem do SDK do .NET
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /app
+
+# Copie o arquivo .csproj e restaure as dependências
+COPY *.csproj ./
+RUN dotnet restore
+
+# Copie o restante do código e compile o projeto
+COPY . ./
+RUN dotnet publish -c Release -o out
+
+# Use uma imagem do Runtime do .NET para a execução
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/out .
+
+# Definir variáveis de ambiente
+ENV DISCORD_TOKEN="seu-token-aqui" \
+    WELCOME_CHANNEL_ID="id-do-canal-aqui" \
+    BACKGROUND_IMAGE_URL="" \
+    WELCOME_TEXT="Bem-vindo(a) ao Servidor!"
+
+# Comando de inicialização do bot
+ENTRYPOINT ["dotnet", "CafeCOMaquina-DiscordBot.dll"]
