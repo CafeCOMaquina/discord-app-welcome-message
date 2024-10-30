@@ -1,4 +1,8 @@
-﻿using Discord;
+﻿using System;
+using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -19,12 +23,10 @@ namespace DiscordBot
 
         public async Task MainAsync()
         {
-           // Carrega o arquivo .env.dev somente em modo DEBUG
             #if DEBUG
             DotNetEnv.Env.Load(".env.dev");
             Console.WriteLine("Arquivo .env.dev carregado (modo DEBUG).");
             #endif
-
 
             _client = new DiscordSocketClient(new DiscordSocketConfig
             {
@@ -37,7 +39,14 @@ namespace DiscordBot
             _client.Log += LogAsync;
             _client.UserJoined += UserJoinedAsync;
 
-            await _client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DISCORD_TOKEN") );
+            var token = Environment.GetEnvironmentVariable("DISCORD_TOKEN");
+            if (string.IsNullOrEmpty(token))
+            {
+                Console.WriteLine("Erro: Token do Discord não encontrado. Defina a variável de ambiente 'DISCORD_TOKEN'.");
+                return;
+            }
+
+            await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
 
             await Task.Delay(-1);
@@ -57,7 +66,6 @@ namespace DiscordBot
 
             if (!string.IsNullOrEmpty(welcomeChannelIdStr) && ulong.TryParse(welcomeChannelIdStr, out ulong welcomeChannelId))
             {
-                // Conversão bem-sucedida, você pode usar `welcomeChannelId`
                 Console.WriteLine($"ID do canal de boas-vindas: {welcomeChannelId}");
             }
             else
@@ -66,7 +74,7 @@ namespace DiscordBot
                 return;
             }            
 
-            var welcomeChannel = user.Guild.GetTextChannel(welcomeChannelId); // Substitua pelo ID do canal de boas-vindas
+            var welcomeChannel = user.Guild.GetTextChannel(welcomeChannelId);
             if (welcomeChannel != null)
             {
                 var avatarUrl = user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl();
@@ -90,19 +98,18 @@ namespace DiscordBot
             int height = 400;
             string filePath = Path.Combine(Path.GetTempPath(), $"welcome_card_{Guid.NewGuid()}.png");
 
-            // Obter URL da imagem de fundo e o texto de boas-vindas
+            // Obter URL da imagem de fundo, texto de boas-vindas, cor de fundo e cor da fonte
             string backgroundUrl = Environment.GetEnvironmentVariable("BACKGROUND_IMAGE_URL") ?? string.Empty;
             string welcomeText = Environment.GetEnvironmentVariable("WELCOME_TEXT") ?? "Bem-vindo(a) ao Servidor!";
-            string localBackgroundPath = "assets/images/bg.webp"; // Caminho da imagem padrão no contêiner
+            string backgroundColorHex = Environment.GetEnvironmentVariable("BACKGROUND_COLOR") ?? "#000000"; // Preto
+            string fontColorHex = Environment.GetEnvironmentVariable("FONT_COLOR") ?? "#FFFFFF"; // Branco
 
             try
             {
                 using (var image = new Image<Rgba32>(width, height))
                 {
-                    // Escolher entre a imagem de fundo local ou uma URL externa
                     if (!string.IsNullOrEmpty(backgroundUrl))
                     {
-                        // Baixar a imagem de fundo da URL
                         using var httpClient = new HttpClient();
                         using var backgroundStream = await httpClient.GetStreamAsync(backgroundUrl);
                         using var backgroundImage = Image.Load<Rgba32>(backgroundStream);
@@ -117,16 +124,8 @@ namespace DiscordBot
                     }
                     else
                     {
-                        // Carregar a imagem de fundo local
-                        using var backgroundImage = Image.Load<Rgba32>(localBackgroundPath);
-                        var resizeOptions = new ResizeOptions
-                        {
-                            Size = new Size(width, height),
-                            Mode = ResizeMode.Crop
-                        };
-
-                        backgroundImage.Mutate(ctx => ctx.Resize(resizeOptions).Opacity(0.15f));
-                        image.Mutate(ctx => ctx.DrawImage(backgroundImage, new Point(0, 0), 1f));
+                        var backgroundColor = Color.ParseHex(backgroundColorHex);
+                        image.Mutate(ctx => ctx.Fill(backgroundColor));
                     }
 
                     // Baixar e aplicar a imagem do avatar
@@ -142,10 +141,12 @@ namespace DiscordBot
                         image.Mutate(ctx => ctx.DrawImage(avatarImage, new Point(avatarX, avatarY), 1f));
                     }
 
-                    // Carregar e aplicar o texto
                     var fontCollection = new FontCollection();
-                    var fontFamily = fontCollection.Add("assets/fonts/DejaVuSans.ttf"); // Fonte fixa
+                    var fontFamily = fontCollection.Add("assets/fonts/DejaVuSans.ttf");
                     var font = fontFamily.CreateFont(24, FontStyle.Bold);
+
+                    // Converter a cor da fonte
+                    var fontColor = Color.ParseHex(fontColorHex);
 
                     // Configuração de centralização do nome do usuário
                     var usernameOptions = new RichTextOptions(font)
@@ -154,7 +155,7 @@ namespace DiscordBot
                         VerticalAlignment = VerticalAlignment.Center,
                         Origin = new PointF(width / 2, 250)
                     };
-                    image.Mutate(ctx => ctx.DrawText(usernameOptions, username, Color.White));
+                    image.Mutate(ctx => ctx.DrawText(usernameOptions, username, fontColor));
 
                     var memberOptions = new RichTextOptions(font)
                     {
@@ -163,7 +164,7 @@ namespace DiscordBot
                         Origin = new PointF(width / 2, 290)
                     };
                     string memberText = $"Membro número: {memberNumber}";
-                    image.Mutate(ctx => ctx.DrawText(memberOptions, memberText, Color.LightGray));
+                    image.Mutate(ctx => ctx.DrawText(memberOptions, memberText, fontColor));
 
                     var welcomeOptions = new RichTextOptions(font)
                     {
@@ -171,9 +172,8 @@ namespace DiscordBot
                         VerticalAlignment = VerticalAlignment.Center,
                         Origin = new PointF(width / 2, 340)
                     };
-                    image.Mutate(ctx => ctx.DrawText(welcomeOptions, welcomeText, Color.White));
+                    image.Mutate(ctx => ctx.DrawText(welcomeOptions, welcomeText, fontColor));
 
-                    // Salva o card como arquivo temporário
                     image.Save(filePath, new SixLabors.ImageSharp.Formats.Png.PngEncoder());
                 }
 
@@ -185,23 +185,5 @@ namespace DiscordBot
                 return null;
             }
         }
-
-
-
-
-
     }
-
-
 }
-
-
-
-
-
-
-
-
-
-
-

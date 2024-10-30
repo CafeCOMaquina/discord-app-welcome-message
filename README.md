@@ -31,5 +31,8 @@ services:
         environment:
           DISCORD_TOKEN: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
           WELCOME_CHANNEL_ID: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-          BACKGROUND_IMAGE_URL: #OPCIONAL
           WELCOME_TEXT: Bem-vindo(a) ao Servidor!
+          BACKGROUND_IMAGE_URL: #OPCIONAL
+          BACKGROUND_COLOR: #OPCIONAL HEXADECIMAL EX: #CCCCCC 
+          FONT_COLOR: #OPCIONAL HEXADECIMAL EX: #CCCCCC 
+          
