@@ -5,6 +5,11 @@
 
 Aplicação criada em ASP.NET Core para monitorar um canal do Discord e enviar uma mensagem de boas-vindas aos novos membros. A mensagem de boas-vindas é configurável e pode incluir uma imagem de fundo ou uma cor sólida, além de opções de personalização para o texto.
 
+## Requisitos
+
+- **Discord Bot Token**: Você precisa de um token para o seu bot, que pode ser obtido no [Discord Developer Portal](https://discord.com/developers/applications).
+- **ID do Canal de Boas-Vindas**: O ID do canal do servidor Discord onde o bot enviará a mensagem de boas-vindas.
+
 ## Parametrização
 
 O bot suporta as seguintes personalizações por meio de variáveis de ambiente:
