@@ -3,6 +3,7 @@
 
 [![.NET](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/dotnet.yml/badge.svg)](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/dotnet.yml)
 [![CodeQL Advanced](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/codeql.yml/badge.svg)](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/codeql.yml)
+[![Dependabot Updates](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/dependabot/dependabot-updates)
 
 Aplicação criada em ASP.NET Core para monitorar um canal do Discord e enviar uma mensagem de boas-vindas aos novos membros. A mensagem de boas-vindas é configurável e pode incluir uma imagem de fundo ou uma cor sólida, além de opções de personalização para o texto.
 
