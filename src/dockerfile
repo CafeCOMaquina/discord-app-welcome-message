@@ -22,6 +22,10 @@ ENV DISCORD_TOKEN="seu-token-aqui" \
     #BACKGROUND_COLOR="" \
     #FONT_COLOR="" \
     WELCOME_TEXT="Bem-vindo(a) ao Servidor!"
+    #YOUTUBE_CHANNEL_ID="id-do-canal-youtube-aqui" \
+    #YOUTUBE_DISCORD_CHANNEL_ID="id-do-canal-discord-para-youtube-aqui" \
+    #YOUTUBE_MESSAGE_TEMPLATE="Novo vídeo no canal {author}: {title}\n{url}" \
+    #YOUTUBE_WATCH_INTERVAL="30000"    
 
 # Comando de inicialização do bot
 ENTRYPOINT ["dotnet", "DiscordAppWelcomeMessage.dll"]
