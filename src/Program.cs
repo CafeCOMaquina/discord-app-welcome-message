@@ -110,8 +110,7 @@ namespace DiscordBot
                         {
                             _notifiedVideos.Add(videoUrl);
 
-                            var discordChannel = _client.GetChannel(discordChannelId) as IMessageChannel;
-                            if (discordChannel != null)
+                            if (_client?.GetChannel(discordChannelId) is IMessageChannel discordChannel)
                             {
                                 // Prepara e envia a mensagem
                                 string message = messageTemplate
