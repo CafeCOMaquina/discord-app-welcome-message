@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -12,12 +8,14 @@ using SixLabors.ImageSharp.Processing;
 using Color = SixLabors.ImageSharp.Color;
 using Image = SixLabors.ImageSharp.Image;
 using Path = System.IO.Path;
+using System.Xml.Linq;
 
 namespace DiscordBot
 {
     class Program
     {
         private DiscordSocketClient? _client;
+        private readonly List<string> _notifiedVideos = []; // Lista de vídeos já notificados
 
         public static Task Main(string[] args) => new Program().MainAsync();
 
@@ -49,6 +47,21 @@ namespace DiscordBot
             await _client.LoginAsync(TokenType.Bot, token);
             await _client.StartAsync();
 
+            // Inicia o monitoramento de uploads no YouTube
+            // Verifica se as variáveis para a funcionalidade do YouTube estão configuradas
+            string? youtubeChannelId = Environment.GetEnvironmentVariable("YOUTUBE_CHANNEL_ID");
+            string? discordChannelIdStr = Environment.GetEnvironmentVariable("YOUTUBE_DISCORD_CHANNEL_ID");
+
+            if (!string.IsNullOrEmpty(youtubeChannelId) && !string.IsNullOrEmpty(discordChannelIdStr))
+            {
+                Console.WriteLine("Configurações do YouTube encontradas. Monitoramento de uploads ativado.");
+                _ = MonitorYouTubeUploadsAsync(youtubeChannelId, discordChannelIdStr);
+            }
+            else
+            {
+                Console.WriteLine("Configurações do YouTube não encontradas. Funcionalidade de monitoramento de uploads será desativada.");
+            }
+
             await Task.Delay(-1);
         }
 
@@ -58,6 +71,69 @@ namespace DiscordBot
             return Task.CompletedTask;
         }
 
+        private async Task MonitorYouTubeUploadsAsync(string youtubeChannelId, string discordChannelIdStr)
+        {
+            string messageTemplate = Environment.GetEnvironmentVariable("YOUTUBE_MESSAGE_TEMPLATE") ??
+                                     "Novo vídeo no canal {author}: {title}\n{url}";
+            int watchInterval = int.TryParse(Environment.GetEnvironmentVariable("YOUTUBE_WATCH_INTERVAL"), out int interval)
+                ? interval
+                : 30000; // Padrão de 30 segundos
+
+            if (!ulong.TryParse(discordChannelIdStr, out ulong discordChannelId))
+            {
+                Console.WriteLine("Erro: ID do canal do Discord é inválido. Funcionalidade de monitoramento desativada.");
+                return;
+            }
+
+            var httpClient = new HttpClient();
+            string feedUrl = $"https://www.youtube.com/feeds/videos.xml?channel_id={youtubeChannelId}";
+
+            while (true)
+            {
+                try
+                {
+                    // Obtém o feed RSS do canal do YouTube
+                    var response = await httpClient.GetStringAsync(feedUrl);
+                    var xDoc = XDocument.Parse(response);
+                    var latestVideo = xDoc.Descendants("entry").FirstOrDefault();
+
+                    if (latestVideo != null)
+                    {
+                        string videoUrl = latestVideo.Element("link")?.Attribute("href")?.Value ?? string.Empty;
+                        string videoTitle = latestVideo.Element("title")?.Value ?? "Título desconhecido";
+                        string videoAuthor = latestVideo.Element("{http://www.w3.org/2005/Atom}author")
+                            ?.Element("{http://www.w3.org/2005/Atom}name")
+                            ?.Value ?? "Autor desconhecido";
+
+                        // Verifica se o vídeo já foi notificado
+                        if (!_notifiedVideos.Contains(videoUrl))
+                        {
+                            _notifiedVideos.Add(videoUrl);
+
+                            if (_client?.GetChannel(discordChannelId) is IMessageChannel discordChannel)
+                            {
+                                // Prepara e envia a mensagem
+                                string message = messageTemplate
+                                    .Replace("{author}", videoAuthor)
+                                    .Replace("{title}", videoTitle)
+                                    .Replace("{url}", videoUrl);
+
+                                await discordChannel.SendMessageAsync(message);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao monitorar uploads: {ex.Message}");
+                }
+
+                // Aguarda pelo intervalo configurado antes de verificar novamente
+                await Task.Delay(watchInterval);
+            }
+        }
+
+       
         private async Task UserJoinedAsync(SocketGuildUser user)
         {
             Console.WriteLine("Novo membro entrou no servidor.");
