@@ -135,6 +135,8 @@ Contribuições são bem-vindas! Abra issues ou envie pull requests com melhoria
 
 ## Licença
 
-Este projeto é licenciado sob a [Licença MIT](LICENSE).
+Este projeto é licenciado sob a [Licença Creative Commons Attribution-NonCommercial 4.0](LICENSE).  
+Você pode usá-lo, modificá-lo e redistribuí-lo apenas para fins NÃO comerciais, desde que atribua o devido crédito.  
+Para usos comerciais, entre em contato para obter permissão.
 
 ---
