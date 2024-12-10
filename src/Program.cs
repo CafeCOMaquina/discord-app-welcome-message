@@ -55,7 +55,7 @@ namespace DiscordBot
             if (!string.IsNullOrEmpty(youtubeChannelId) && !string.IsNullOrEmpty(discordChannelIdStr))
             {
                 Console.WriteLine("Configurações do YouTube encontradas. Monitoramento de uploads ativado.");
-                _ = MonitorYouTubeUploadsAsync(youtubeChannelId, discordChannelIdStr);
+                await MonitorYouTubeUploadsAsync(youtubeChannelId, discordChannelIdStr);
             }
             else
             {
@@ -71,13 +71,10 @@ namespace DiscordBot
             return Task.CompletedTask;
         }
 
-        private async Task MonitorYouTubeUploadsAsync(string youtubeChannelId, string discordChannelIdStr)
+        public async Task MonitorYouTubeUploadsAsync(string youtubeChannelId, string discordChannelIdStr)
         {
             string messageTemplate = Environment.GetEnvironmentVariable("YOUTUBE_MESSAGE_TEMPLATE") ??
-                                     "Novo vídeo no canal {author}: {title}\n{url}";
-            int watchInterval = int.TryParse(Environment.GetEnvironmentVariable("YOUTUBE_WATCH_INTERVAL"), out int interval)
-                ? interval
-                : 30000; // Padrão de 30 segundos
+                                    "Novo vídeo no canal {author}: {title}\n{url}";
 
             if (!ulong.TryParse(discordChannelIdStr, out ulong discordChannelId))
             {
@@ -88,31 +85,35 @@ namespace DiscordBot
             var httpClient = new HttpClient();
             string feedUrl = $"https://www.youtube.com/feeds/videos.xml?channel_id={youtubeChannelId}";
 
+            // Inicializar o serviço Firebase
+            var firebaseService = new FirebaseService();
+
             while (true)
             {
                 try
                 {
-                    // Obtém o feed RSS do canal do YouTube
+                    // Obter o feed RSS do YouTube
                     var response = await httpClient.GetStringAsync(feedUrl);
                     var xDoc = XDocument.Parse(response);
-                    var latestVideo = xDoc.Descendants("entry").FirstOrDefault();
+
+                    var ns = XNamespace.Get("http://www.w3.org/2005/Atom");
+                    var latestVideo = xDoc.Descendants(ns + "entry").FirstOrDefault();
 
                     if (latestVideo != null)
                     {
-                        string videoUrl = latestVideo.Element("link")?.Attribute("href")?.Value ?? string.Empty;
-                        string videoTitle = latestVideo.Element("title")?.Value ?? "Título desconhecido";
-                        string videoAuthor = latestVideo.Element("{http://www.w3.org/2005/Atom}author")
-                            ?.Element("{http://www.w3.org/2005/Atom}name")
-                            ?.Value ?? "Autor desconhecido";
+                        string videoUrl = latestVideo.Element(ns + "link")?.Attribute("href")?.Value ?? string.Empty;
+                        string videoTitle = latestVideo.Element(ns + "title")?.Value ?? "Título desconhecido";
+                        string videoAuthor = latestVideo.Element(ns + "author")?.Element(ns + "name")?.Value ?? "Autor desconhecido";
 
-                        // Verifica se o vídeo já foi notificado
-                        if (!_notifiedVideos.Contains(videoUrl))
+                        // Verificar se o vídeo já foi notificado
+                        if (!await firebaseService.IsVideoNotifiedAsync(videoUrl))
                         {
-                            _notifiedVideos.Add(videoUrl);
+                            // Adicionar à lista de notificados no Firebase
+                            await firebaseService.AddNotifiedVideoAsync(videoUrl);
 
+                            // Enviar mensagem ao Discord (caso configurado)
                             if (_client?.GetChannel(discordChannelId) is IMessageChannel discordChannel)
                             {
-                                // Prepara e envia a mensagem
                                 string message = messageTemplate
                                     .Replace("{author}", videoAuthor)
                                     .Replace("{title}", videoTitle)
@@ -128,10 +129,11 @@ namespace DiscordBot
                     Console.WriteLine($"Erro ao monitorar uploads: {ex.Message}");
                 }
 
-                // Aguarda pelo intervalo configurado antes de verificar novamente
-                await Task.Delay(watchInterval);
+                await Task.Delay(30000); // Intervalo de 30 segundos
             }
         }
+
+
 
        
         private async Task UserJoinedAsync(SocketGuildUser user)
