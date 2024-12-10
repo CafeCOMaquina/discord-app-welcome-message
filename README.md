@@ -5,7 +5,7 @@
 [![CodeQL Advanced](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/codeql.yml/badge.svg)](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/codeql.yml)  
 [![Dependabot Updates](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/CafeCOMaquina/discord-app-welcome-message/actions/workflows/dependabot/dependabot-updates)
 
-Aplicação criada em ASP.NET Core para enviar mensagens de boas-vindas personalizadas aos novos membros de um servidor Discord e monitorar uploads de vídeos de um canal do YouTube, enviando notificações automaticamente.
+Aplicação criada em ASP.NET Core para enviar mensagens de boas-vindas personalizadas aos novos membros de um servidor Discord e monitorar uploads de vídeos de um canal do YouTube, enviando notificações automaticamente. Agora integrado ao Firebase para gerenciamento de notificações de vídeos.
 
 ---
 
@@ -15,6 +15,8 @@ Aplicação criada em ASP.NET Core para enviar mensagens de boas-vindas personal
    - Personalizável com imagem de fundo, cor sólida e texto configurável.
 2. **Monitoramento de uploads do YouTube**:
    - Periodicamente verifica um canal do YouTube e notifica um canal do Discord sobre novos vídeos.
+3. **Persistência com Firebase**:
+   - Armazena URLs de vídeos notificados no Firebase Realtime Database para evitar notificações duplicadas.
 
 ---
 
@@ -24,6 +26,9 @@ Aplicação criada em ASP.NET Core para enviar mensagens de boas-vindas personal
 - **ID do Canal de Boas-Vindas**: ID do canal no Discord onde as mensagens de boas-vindas serão enviadas.
 - **YouTube Channel ID**: ID do canal do YouTube que será monitorado.
 - **ID do Canal de Notificações do Discord**: ID do canal no Discord para receber notificações de uploads.
+- **Firebase Configurações**:
+  - URL do Realtime Database.
+  - Credenciais da conta de serviço (arquivo JSON configurado como variável de ambiente).
 
 ---
 
@@ -41,10 +46,13 @@ Aplicação criada em ASP.NET Core para enviar mensagens de boas-vindas personal
 | `FONT_COLOR`            | Cor do texto no cartão de boas-vindas (hexadecimal, ex.: `#FFFFFF`).                       | Não         |
 | `YOUTUBE_CHANNEL_ID`    | ID do canal do YouTube que será monitorado.                                                | Não         |
 | `YOUTUBE_DISCORD_CHANNEL_ID`    | ID do canal do Discord para notificações de uploads.                                       | Não         |
-| `YOUTUBE_MESSAGE_TEMPLATE`      | Modelo de mensagem para notificações de vídeos. Ex.: `{author}: {title}\n{url}`.           | Não         |
+| `YOUTUBE_MESSAGE_TEMPLATE`      | Modelo de mensagem para notificações de vídeos. Ex.: `{author}: {title}
+{url}`.           | Não         |
 | `YOUTUBE_WATCH_INTERVAL`        | Intervalo em milissegundos para verificar novos vídeos no YouTube (padrão: `30000`).       | Não         |
+| `FIREBASE_URL`          | URL do Realtime Database do Firebase.                                                     | Sim         |
+| `FIREBASE_CREDENTIALS`  | Credenciais do Firebase em formato JSON (definidas como variável de ambiente).             | Sim         |
 
-> **Nota:** As funcionalidades do YouTube são opcionais e desativadas automaticamente se as variáveis `YOUTUBE_CHANNEL_ID` ou `DISCORD_CHANNEL_ID` não forem configuradas.
+> **Nota:** As funcionalidades do YouTube e Firebase são opcionais, mas o Firebase deve estar configurado para persistência das notificações de vídeos.
 
 ---
 
@@ -63,6 +71,8 @@ Aplicação criada em ASP.NET Core para enviar mensagens de boas-vindas personal
    WELCOME_TEXT=Bem-vindo(a) ao nosso servidor!
    YOUTUBE_CHANNEL_ID=id-do-canal-youtube
    YOUTUBE_DISCORD_CHANNEL_ID=id-do-canal-discord
+   FIREBASE_URL=https://<seu-projeto>.firebaseio.com
+   FIREBASE_CREDENTIALS='{"type":"service_account","project_id":"<seu-projeto>",...}'
    ```
 
 3. Execute o projeto:
@@ -83,13 +93,7 @@ docker build -t discord-app-welcome-message .
 ### Executar com Docker
 
 ```bash
-docker run -d \
-  -e DISCORD_TOKEN=<seu-token> \
-  -e WELCOME_CHANNEL_ID=<id-do-canal> \
-  -e YOUTUBE_CHANNEL_ID=<id-do-canal-youtube> \
-  -e YOUTUBE_DISCORD_CHANNEL_ID=<id-do-canal-discord> \
-  -e YOUTUBE_MESSAGE_TEMPLATE="Novo vídeo no canal {author}: {title}\n{url}" \
-  cafecomaquina/discord-app-welcome-message:latest
+docker run -d   -e DISCORD_TOKEN=<seu-token>   -e WELCOME_CHANNEL_ID=<id-do-canal>   -e YOUTUBE_CHANNEL_ID=<id-do-canal-youtube>   -e YOUTUBE_DISCORD_CHANNEL_ID=<id-do-canal-discord>   -e FIREBASE_URL=https://<seu-projeto>.firebaseio.com   -e FIREBASE_CREDENTIALS='{"type":"service_account","project_id":"<seu-projeto>",...}'   cafecomaquina/discord-app-welcome-message:latest
 ```
 
 ### Usando Docker Compose
@@ -108,7 +112,8 @@ services:
       WELCOME_TEXT: "Bem-vindo(a) ao nosso servidor!"
       YOUTUBE_CHANNEL_ID: "<id-do-canal-youtube>"
       YOUTUBE_DISCORD_CHANNEL_ID: "<id-do-canal-discord>"
-      YOUTUBE_MESSAGE_TEMPLATE: "Novo vídeo no canal {author}: {title}\n{url}"
+      FIREBASE_URL: "https://<seu-projeto>.firebaseio.com"
+      FIREBASE_CREDENTIALS: '{"type":"service_account","project_id":"<seu-projeto>",...}'
     restart: always
 ```
 
@@ -123,7 +128,8 @@ docker-compose up -d
 
 - Certifique-se de que o bot tem permissões suficientes para acessar os canais configurados.
 - Teste o bot em um ambiente de desenvolvimento antes de colocá-lo em produção.
-- O monitoramento do YouTube depende de feeds RSS e do intervalo configurado (`WATCH_INTERVAL`).
+- O monitoramento do YouTube depende de feeds RSS e do intervalo configurado (`YOUTUBE_WATCH_INTERVAL`).
+- As credenciais do Firebase devem ser armazenadas de forma segura como variável de ambiente.
 
 ---
 
