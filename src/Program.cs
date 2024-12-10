@@ -9,6 +9,7 @@ using Color = SixLabors.ImageSharp.Color;
 using Image = SixLabors.ImageSharp.Image;
 using Path = System.IO.Path;
 using System.Xml.Linq;
+using Serilog;
 
 namespace DiscordBot
 {
@@ -21,6 +22,11 @@ namespace DiscordBot
 
         public async Task MainAsync()
         {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Console()
+                .CreateLogger();
+
             #if DEBUG
             DotNetEnv.Env.Load(".env.dev");
             Console.WriteLine("Arquivo .env.dev carregado (modo DEBUG).");
@@ -40,7 +46,7 @@ namespace DiscordBot
             var token = Environment.GetEnvironmentVariable("DISCORD_TOKEN");
             if (string.IsNullOrEmpty(token))
             {
-                Console.WriteLine("Erro: Token do Discord não encontrado. Defina a variável de ambiente 'DISCORD_TOKEN'.");
+                Log.Error("Erro: Token do Discord não encontrado. Defina a variável de ambiente 'DISCORD_TOKEN'.");
                 return;
             }
 
@@ -54,12 +60,12 @@ namespace DiscordBot
 
             if (!string.IsNullOrEmpty(youtubeChannelId) && !string.IsNullOrEmpty(discordChannelIdStr))
             {
-                Console.WriteLine("Configurações do YouTube encontradas. Monitoramento de uploads ativado.");
+                Log.Information("Configurações do YouTube encontradas. Monitoramento de uploads ativado.");
                 await MonitorYouTubeUploadsAsync(youtubeChannelId, discordChannelIdStr);
             }
             else
             {
-                Console.WriteLine("Configurações do YouTube não encontradas. Funcionalidade de monitoramento de uploads será desativada.");
+                Log.Warning("Configurações do YouTube não encontradas. Funcionalidade de monitoramento de uploads será desativada.");
             }
 
             await Task.Delay(-1);
@@ -78,7 +84,7 @@ namespace DiscordBot
 
             if (!ulong.TryParse(discordChannelIdStr, out ulong discordChannelId))
             {
-                Console.WriteLine("Erro: ID do canal do Discord é inválido. Funcionalidade de monitoramento desativada.");
+                Log.Error("Erro: ID do canal do Discord é inválido. Funcionalidade de monitoramento desativada.");
                 return;
             }
 
@@ -126,7 +132,7 @@ namespace DiscordBot
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Erro ao monitorar uploads: {ex.Message}");
+                    Log.Error("Erro ao monitorar uploads: {Message}", ex.Message);
                 }
 
                 await Task.Delay(30000); // Intervalo de 30 segundos
@@ -138,17 +144,17 @@ namespace DiscordBot
        
         private async Task UserJoinedAsync(SocketGuildUser user)
         {
-            Console.WriteLine("Novo membro entrou no servidor.");
+            Log.Information("Novo membro entrou no servidor: {0}", user.Username);
 
             string welcomeChannelIdStr = Environment.GetEnvironmentVariable("WELCOME_CHANNEL_ID") ?? string.Empty;
 
             if (!string.IsNullOrEmpty(welcomeChannelIdStr) && ulong.TryParse(welcomeChannelIdStr, out ulong welcomeChannelId))
             {
-                Console.WriteLine($"ID do canal de boas-vindas: {welcomeChannelId}");
+                Log.Information("ID do canal de boas-vindas: {0}", welcomeChannelId);
             }
             else
             {
-                Console.WriteLine("Erro: 'WELCOME_CHANNEL_ID' não é um número válido ou não está definido.");
+                Log.Error("Erro: 'WELCOME_CHANNEL_ID' não é válido ou não está definido.");
                 return;
             }            
 
@@ -166,7 +172,7 @@ namespace DiscordBot
             }
             else
             {
-                Console.WriteLine("Canal de boas-vindas não encontrado.");
+                Log.Warning("Canal de boas-vindas não encontrado.");
             }
         }
 
@@ -259,7 +265,7 @@ namespace DiscordBot
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro ao gerar o card de boas-vindas: {ex.Message}");
+                Log.Error("Erro ao gerar o card de boas-vindas: {Message}", ex.Message);
                 return null;
             }
         }
